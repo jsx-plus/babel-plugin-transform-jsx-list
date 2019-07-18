@@ -1,30 +1,19 @@
-# babel-plugin-transform-jsx-condition
+# babel-plugin-transform-jsx-list
 
-Support of transform jsx condition directive.
+Support of transform jsx list directive.
 
 ## Example
 
 **In**
 
 ```jsx
-// input code
-<View x-if={condition}>First</View>
-<View x-elseif={another}>Second</View>
-<View x-else}>Third</View>
+<View x-for={(item, key) in foo}>key: {key}, item: {item}</View>
 ```
 
 **Out**
 
 ```jsx
-{
-  condition
-    ? <View>First</View>
-    : (
-      another 
-        ? <View>Second</View>
-        : <View>Third</View>
-      )
-}
+{createList.call(this, foo, (item, key) => <View>key: {key}, item: {item}</View>)}
 ```
 
 ## Installation
@@ -41,20 +30,20 @@ $ npm install babel-plugin-transform-jsx-condition
 
 ```json
 {
-  "plugins": ["transform-jsx-condition"]
+  "plugins": ["transform-jsx-list"]
 }
 ```
 
 ### Via CLI
 
 ```sh
-$ babel --plugins transform-jsx-condition script.js
+$ babel --plugins transform-jsx-list script.js
 ```
 
 ### Via Node API
 
 ```javascript
 require("babel-core").transform("code", {
-  plugins: ["transform-jsx-condition"]
+  plugins: ["transform-jsx-list"]
 });
 ```
