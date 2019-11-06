@@ -5,6 +5,7 @@ function Foo() {
     <View>
       <View x-for={array}>hello</View>
       <View x-for={item in array}>item: {item}</View>
+      <Fragment x-for={item in array}>item: {item}</Fragment>
       <View x-for={(item, key) in foo}>key: {key}, item: {item}</View>
       <View x-for={(item, key) in exp()}>key: {key}, item: {item}</View>
     </View>
