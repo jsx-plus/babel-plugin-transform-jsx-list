@@ -4,40 +4,38 @@ const helperImportedName = 'createList'
 const helperLocalName = '__create_list__';
 
 export default function ({ types: t }) {
+  function getAttrXFor(node) {
+    return t.isJSXElement(node)
+      && node.openingElement.attributes.length > 0
+      && node.openingElement.attributes.find((jsxAttr) => t.isJSXAttribute(jsxAttr) && t.isJSXIdentifier(jsxAttr.name, { name: DIRECTIVE }));
+  }
+
   return {
     visitor: {
       Program(path) {
         path.__listHelperImported = false;
       },
-      JSXElement: {
-        exit(path) {
-          const { node, parentPath } = path;
-          if (node.__jsxlist) {
-            const { args, iterValue } = node.__jsxlist;
-            node.__jsxlist = null;
-            // `__create_list__.call(this, value, render)`
-            const replacer = t.callExpression(
-              t.memberExpression(t.identifier(helperLocalName), t.identifier('call')),
-              [t.thisExpression(), iterValue, t.arrowFunctionExpression(args, node)]
-            );
-            if (parentPath.isJSXElement()) {
-              path.replaceWith(t.jsxExpressionContainer(replacer));
-            } else {
-              path.replaceWith(replacer);
-            }
-          }
-        }
-      },
-      JSXAttribute(path) {
-        const { node } = path;
-        if (t.isJSXIdentifier(node.name, { name: DIRECTIVE })) {
+      JSXElement(path) {
+        const { node, parentPath } = path;
+
+        if (node.__listHandled) return;
+        node.__listHandled = true;
+
+        const attrXFor = getAttrXFor(node);
+        if (attrXFor) {
+          // Remove x-for attribute
+          node.openingElement.attributes.splice(
+            node.openingElement.attributes.indexOf(attrXFor),
+            1
+          );
+          const rootPath = path.findParent(p => p.isProgram());
           // Check stynax.
-          if (!t.isJSXExpressionContainer(node.value)) {
+          if (!t.isJSXExpressionContainer(attrXFor.value)) {
             // TODO: throw err prettier.
             console.warn('ignore x-for due to stynax error.');
             return;
           }
-          const { expression } = node.value;
+          const { expression } = attrXFor.value;
           let params = [];
           let iterValue;
 
@@ -60,10 +58,6 @@ export default function ({ types: t }) {
             iterValue = expression;
           }
 
-          const rootPath = path.findParent(p => p.isProgram());
-          const parentJSXEl = path.findParent(p => p.isJSXElement());
-          parentJSXEl.node.__jsxlist = { args: params, iterValue };
-
           if (rootPath.__listHelperImported === false) {
             const imported = t.identifier(helperImportedName);
             const local = t.identifier(helperLocalName);
@@ -73,9 +67,19 @@ export default function ({ types: t }) {
             rootPath.unshiftContainer('body', importDeclaration);
             rootPath.__listHelperImported = true;
           }
-          path.remove();
+
+          // `__create_list__.call(this, value, render)`
+          const replacer = t.callExpression(
+            t.memberExpression(t.identifier(helperLocalName), t.identifier('call')),
+            [t.thisExpression(), iterValue, t.arrowFunctionExpression(params, node)]
+          );
+          if (parentPath.isJSXElement()) {
+            path.replaceWith(t.jsxExpressionContainer(replacer));
+          } else {
+            path.replaceWith(replacer);
+          }
         }
-      }
+      },
     }
   };
 }
