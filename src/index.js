@@ -3,10 +3,7 @@ const helperImportedFrom = 'babel-runtime-jsx-plus'
 const helperImportedName = 'createList'
 const helperLocalName = '__create_list__';
 
-export default function({ types: t }) {
-  // `__create_list__.call`
-  const callee = t.memberExpression(t.identifier(helperLocalName), t.identifier('call'));
-
+export default function ({ types: t }) {
   return {
     visitor: {
       Program(path) {
@@ -18,12 +15,11 @@ export default function({ types: t }) {
           if (node.__jsxlist) {
             const { args, iterValue } = node.__jsxlist;
             node.__jsxlist = null;
-            // Arguments for `__create_list__.call`: (this, value, render)
-            const replacer = t.callExpression(callee, [
-              t.thisExpression(),
-              iterValue,
-              t.arrowFunctionExpression(args, node)
-            ]);
+            // `__create_list__.call(this, value, render)`
+            const replacer = t.callExpression(
+              t.memberExpression(t.identifier(helperLocalName), t.identifier('call')),
+              [t.thisExpression(), iterValue, t.arrowFunctionExpression(args, node)]
+            );
             if (parentPath.isJSXElement()) {
               path.replaceWith(t.jsxExpressionContainer(replacer));
             } else {
